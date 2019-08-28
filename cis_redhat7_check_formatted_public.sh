@@ -18,7 +18,7 @@ echo "WARNING: This script is only for Red Hat 7, please use correct script"
 echo "for target operating system"
 echo "*********************************************************"
 
-exec > >(tee "/root/cis_report.txt") 2>&1
+exec > "/root/cis_report.txt"
 
 echo "CIS Security Audit Report"
 echo "*DATE*"
@@ -34,53 +34,20 @@ echo "******1.1.1 Disable Unused File Systems******"
 echo ""
 echo ""
 
-echo "1.1.1.1 Ensure mounting of cramfs filesystems is disabled"
-echo "$ modprobe -n -v cramfs"
-modprobe -n -v cramfs
-echo "$ lsmod | grep -c cramfs"
-lsmod | grep -c cramfs
-
-echo "1.1.1.2 Ensure mounting of freevxfs filesystems is disabled"
-echo "$ modprobe -n -v freevxfs"
-modprobe -n -v freevxfs
-echo "$ lsmod | grep -c freevxfs"
-lsmod | grep -c freevxfs
-
-echo "1.1.1.3 Ensure mounting of jffs2 filesystems is disabled"
-echo "$ modprobe -n -v jffs2"
-modprobe -n -v jffs2
-echo "$ lsmod | grep -c jffs2"
-lsmod | grep -c jffs2
-
-echo "1.1.1.4 Ensure mounting of hfs filesystems is disabled"
-echo "$ modprobe -n -v hfs"
-modprobe -n -v hfs
-echo "$ lsmod | grep -c hfs"
-lsmod | grep -c hfs
-
-echo "1.1.1.5 Ensure mounting of hfsplus filesystems is disabled"
-echo "$ modprobe -n -v hfsplus"
-modprobe -n -v hfsplus
-echo "$ lsmod | grep -c hfsplus"
-lsmod | grep -c hfsplus
-
-echo "1.1.1.6 Ensure mounting of squashfs filesystems is disabled"
-echo "$ modprobe -n -v squashfs"
-modprobe -n -v squashfs
-echo "$ lsmod | grep -c squashfs"
-lsmod | grep -c squashfs
-
-echo "1.1.1.7 Ensure mounting of udf filesystems is disabled"
-echo "$ modprobe -n -v udf"
-modprobe -n -v udf
-echo "$ lsmod | grep -c udf"
-lsmod | grep -c udf
-
-echo "1.1.1.8 Ensure mounting of FAT filesystems is disabled"
-echo "$ modprobe -n -v vfat"
-modprobe -n -v vfat
-echo "$ lsmod | grep -c vfat"
-lsmod | grep -c vfat
+modules=(cramfs freevxfs freevxfs jffs2 hfsplus squashfs udf vfat)
+a=1
+for i in "${modules[@]}";
+do 
+    modprobe=`modprobe -n -v $i`
+    lsmod=`lsmod | grep $i`
+    if [ "$modprobe" == "install /bin/true" ] || [ "$lsmod" == "" ];
+        then
+            echo "1.1.1.$a;Ensure mounting of $i filesystems is disabled;OK"
+        else
+            echo "1.1.1.$a;Ensure mounting of $i filesystems is disabled;FAILED"
+    fi
+    a=$(($a+1));
+done;
 
 echo ""
 echo "1.1.3 , 1.1.4 , 1.1.5"
