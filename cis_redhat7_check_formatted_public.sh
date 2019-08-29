@@ -304,65 +304,73 @@ echo ""
 echo "******4.2.1 Configure rsyslog******"
 echo ""
 
-echo ""
-echo "4.2.1.1"
-echo "Check if rsyslog is enabled"
-echo ""
-
-echo "$ systemctl is-enabled rsyslog"
-systemctl is-enabled rsyslog
-
-echo ""
-echo "4.2.1.2"
-echo "Check if logging is configured"
-echo ""
-
-echo "$ ls -al /var/log"
-ls -al /var/log
+check1=`systemctl is-enabled rsyslog`
+if [ "$check1" == "enabled" ] ;
+    then
+        echo "4.2.1.1;Ensure rsyslog Service is enabled;OK"
+    else
+        echo "4.2.1.1;Ensure rsyslog Service is enabled;WARNING"
+fi
 
 echo ""
 echo "******5.2 SSH Server Configuration******"
 echo ""
 
-echo ""
-echo "5.2.1"
-echo "Check if permissions on /etc/ssh/sshd_config are configured"
-echo ""
+check1=`systemctl is-enabled rsyslog`
+if [ "$check1" == "enabled" ] ;
+    then
+        echo "4.2.1.1;Ensure rsyslog Service is enabled;OK"
+    else
+        echo "4.2.1.1;Ensure rsyslog Service is enabled;WARNING"
+fi
 
-echo "$ stat /etc/ssh/sshd_config"
-stat /etc/ssh/sshd_config
+check1=`stat /etc/ssh/sshd_config | grep Uid | awk '{print $2}'`
+if [ "$check1" == "(0600/-rw-------)" ] ;
+    then
+        echo "5.2.1;Ensure permissions on /etc/ssh/sshd_config are configured;OK"
+    else
+        echo "5.2.1;Ensure permissions on /etc/ssh/sshd_config are configured;WARNING"
+fi
 
-echo ""
-echo "5.2.2"
-echo "Check if SSH protocal is set to 2"
-echo ""
+check1=`stat /etc/ssh/sshd_config | grep Uid | awk '{print $2}'`
+if [ "$check1" == "(0600/-rw-------)" ] ;
+    then
+        echo "5.2.1;Ensure permissions on /etc/ssh/sshd_config are configured;OK"
+    else
+        echo "5.2.1;Ensure permissions on /etc/ssh/sshd_config are configured;WARNING"
+fi
 
-echo "$ grep '"^Protocol"' /etc/ssh/sshd_config"
-grep "^Protocol" /etc/ssh/sshd_config
+check1=`grep "^Protocol" /etc/ssh/sshd_config`
+if [ "$check1" == "Protocol 2" ] ;
+    then
+        echo "5.2.2;Ensure SSH Protocol is set to 2;OK"
+    else
+        echo "5.2.2;Ensure SSH Protocol is set to 2;WARNING"
+fi
 
-echo ""
-echo "5.2.3"
-echo "Check if SSH LogLevel is set to INFO"
-echo ""
+check1=`grep "^LogLevel" /etc/ssh/sshd_config`
+if [ "$check1" == "LogLevel INFO" ] ;
+    then
+        echo "5.2.3;Ensure SSH LogLevel is set to INFO;OK"
+    else
+        echo "5.2.3;Ensure SSH LogLevel is set to INFO;WARNING"
+fi
 
-echo "$ grep '"^LogLevel"' /etc/ssh/sshd_config"
-grep "^LogLevel" /etc/ssh/sshd_config
+check1=`grep "^X11Forwarding" /etc/ssh/sshd_config`
+if [ "$check1" == "X11Forwarding no" ] ;
+    then
+        echo "5.2.4;Ensure SSH X11 forwarding is disabled;OK"
+    else
+        echo "5.2.4;Ensure SSH X11 forwarding is disabled;WARNING"
+fi
 
-echo ""
-echo "5.2.4"
-echo "Check if SSH X11 forwarding is disabled"
-echo ""
-
-echo "$ grep '"^X11Forwarding"' /etc/ssh/sshd_config"
-grep "^X11Forwarding" /etc/ssh/sshd_config
-
-echo ""
-echo "5.2.11"
-echo "Check if only approved ciphers are used"
-echo ""
-
-echo "$ grep '"Ciphers"' /etc/ssh/sshd_config"
-grep "Ciphers" /etc/ssh/sshd_config
+check1=`grep "Ciphers" /etc/ssh/sshd_config`
+if [ "$check1" == "Ciphers aes256-ctr,aes192-ctr,aes128-ctr" ] ;
+    then
+        echo "5.2.11;EEnsure only approved MAC algorithms are used;OK"
+    else
+        echo "5.2.11;Ensure only approved MAC algorithms are used;WARNING"
+fi
 
 echo ""
 echo "******6.1 System File Permissions******"
