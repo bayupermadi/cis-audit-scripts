@@ -189,249 +189,116 @@ echo ""
 echo ""******2.2 Special Purpose Services******""
 echo ""
 
-echo ""
-echo "2.2.1"
-echo ""
-echo "2.2.1.1 Check if time synchronization is in use"
-echo ""
+check1=`rpm -q ntp | grep ntp`
+if [ "$check1" != "package ntp is not installed" ];
+    then
+        echo "2.2.1.1;Ensure time synchronization is in use;OK"
+    else
+        echo "2.2.1.1;Ensure time synchronization is in use;WARNING"
+fi
 
-echo "$ rpm -q ntp"
-rpm -q ntp
+check1=`grep '"^restrict"' /etc/ntp.conf`
+check2=`grep '"^(server|pool)"' /etc/ntp.conf`
+check3=`grep '"^OPTIONS"' /etc/sysconfig/ntpd`
+check4=`grep '"^ExecStart"' /usr/lib/systemd/system/ntpd.service`
+if [ "$check1" != "" ] || [ "$check2" != "" ] || [ "$check3" != "" ] || [ "$check4" != "" ];
+    then
+        echo "2.2.1.2;Ensure ntp is configured;OK"
+    else
+        echo "2.2.1.2;Ensure ntp is configured;WARNING"
+fi
 
-echo ""
-echo "2.2.1.2 Check if ntp is properly configured"
-echo ""
+services=(avahi-daemon cups dhcpd slapd named vsftpd httpd dovecot smb squid snmpd ypserv telnet.socket tftp.socket rsyncd ntalk)
+svc_name=(AVAHI CUPS DHCP LDAP DNS FTP HTTP IMAP/POP3 SAMBA HTTP-Proxy SNMP NIS telnet tftp rsync talk)
+a=3
+loop=0
+for i in "${services[@]}";
+do 
+    if [ "$i" == "named" ]; then a=8; 
+    elif [ "$i" == "ypserv" ]; then a=16; 
+    elif [ "$i" == "telnet.socket" ]; then a=18; 
+    fi;
 
-echo "$ grep '"^restrict"' /etc/ntp.conf"
-grep "^restrict" /etc/ntp.conf
+    check=`systemctl is-enabled $i`
+    if [ "$check" == "" ] ;
+        then
+            echo "2.2.$a;Ensure ${svc_name[$loop]} Server is not enabled;OK"
+        else
+            echo "2.2.$a;Ensure ${svc_name[$loop]} Server is not enabled;WARNING"
+    fi
+    a=$(($a+1));
+    loop=$(($loop+1));
+done;
 
-echo "$ grep '"^server"' /etc/ntp.conf"
-grep "^server" /etc/ntp.conf
+check1=`netstat -an | grep LIST | grep ":25[[:space:]]" | grep 127.0.0.1`
+if [ "$check1" != "" ];
+    then
+        echo "2.2.15;Ensure mail transfer agent is configured for local-only mode;OK"
+    else
+        echo "2.2.15;Ensure mail transfer agent is configured for local-only mode;WARNING"
+fi
 
-echo "$ grep '"^OPTIONS"' /etc/sysconfig/ntpd"
-grep "^OPTIONS" /etc/sysconfig/ntpd
-
-echo "$ grep '"^ExecStart"' /usr/lib/systemd/system/ntpd.service"
-grep "^ExecStart" /usr/lib/systemd/system/ntpd.service
-
-
-echo ""
-echo "2.2.3"
-echo "Ensure AVAHI server is not enabled"
-echo ""
-
-echo "$ systemctl is-enabled avahi-daemon"
-systemctl is-enabled avahi-daemon
-
-echo ""
-echo "2.2.4"
-echo "Ensure CUPS is not enabled"
-echo ""
-
-echo "$ systemctl is-enabled cups"
-systemctl is-enabled cups
-
-echo ""
-echo "2.2.5"
-echo "Ensure DHCP server is not enabled"
-echo ""
-
-echo "$ systemctl is-enabled dhcpd"
-systemctl is-enabled dhcpd
-
-echo ""
-echo "2.2.6"
-echo "Ensure LDAP server is not enabled"
-echo ""
-
-echo "$ systemctl is-enabled slapd"
-systemctl is-enabled slapd
-
-echo ""
-echo "2.2.8"
-echo "Ensure DNS server is not enabled"
-echo ""
-
-echo "$ systemctl is-enabled named"
-systemctl is-enabled named
-
-echo ""
-echo "2.2.9"
-echo "Ensure FTP server is not enabled"
-echo ""
-
-echo "$ systemctl is-enabled vsftpd"
-systemctl is-enabled vsftpd
-
-echo ""
-echo "2.2.10"
-echo "Ensure HTTP server is not enabled"
-echo ""
-
-echo "$ systemctl is-enabled httpd"
-systemctl is-enabled httpd
-
-echo ""
-echo "2.2.11"
-echo "Ensure IMAP and POP3 server is not enabled"
-echo ""
-
-echo "$ systemctl is-enabled dovecot"
-systemctl is-enabled dovecot
-
-echo ""
-echo "2.2.12"
-echo "Ensure SAMBA server is not enabled"
-echo ""
-
-echo "$ systemctl is-enabled smb"
-systemctl is-enabled smb
-
-echo ""
-echo "2.2.13"
-echo "Ensure HTTP Proxy server is not enabled"
-echo ""
-
-echo "$ systemctl is-enabled squid"
-systemctl is-enabled squid
-
-echo ""
-echo "2.2.14"
-echo "Ensure SNMP server is not enabled"
-echo ""
-
-echo "$ systemctl is-enabled snmpd"
-systemctl is-enabled snmpd
-
-echo ""
-echo "2.2.15"
-echo "Ensure mail transfer agent is configured for loca-only mode"
-echo ""
-
-echo "$ netstat -an | grep LIST | grep '":25[[:space:]]"'"
-netstat -an | grep LIST | grep ":25[[:space:]]"
-
-echo ""
-echo "2.2.16"
-echo "Ensure NIS server is not enabled"
-echo ""
-
-echo "$ systemctl is-enabled ypserv"
-systemctl is-enabled ypserv
-
-echo ""
-echo "2.2.17"
-echo "Ensure rsh server is not enabled"
-echo ""
-
-echo "$ systemctl is-enabled rsh.socket"
-systemctl is-enabled rsh.socket
-
-echo "$ systemctl is-enabled rlogin.socket"
-systemctl is-enabled rlogin.socket
-
-echo "$ systemctl is-enabled rexec.socket"
-systemctl is-enabled rexec.socket
-
-echo ""
-echo "2.2.18"
-echo "Ensure telnet server is not enabled"
-echo ""
-
-echo "$ systemctl is-enabled telnet.socket"
-systemctl is-enabled telnet.socket
-
-echo ""
-echo "2.2.19"
-echo "Ensure tftp server is not enabled"
-echo ""
-
-echo "$ systemctl is-enabled tftp.socket"
-systemctl is-enabled tftp.socket
-
-echo ""
-echo "2.2.20"
-echo "Ensure rsync server is not enabled"
-echo ""
-
-echo "$ systemctl is-enabled rsyncd"
-systemctl is-enabled rsyncd
-
-echo ""
-echo "2.2.21"
-echo "Ensure talk server is not enabled"
-echo ""
-
-echo "$ systemctl is-enabled ntalk"
-systemctl is-enabled ntalk
+check1=`systemctl is-enabled rsh.socket`
+check2=`systemctl is-enabled rlogin.socket`
+check3=`systemctl is-enabled rexec.socket`
+if [ "$check1" != "" ] || [ "$check2" != "" ] || [ "$check3" != "" ];
+    then
+        echo "2.2.17;Ensure rsh server is not enabled;OK"
+    else
+        echo "2.2.17;Ensure rsh server is not enabled;WARNING"
+fi
 
 echo ""
 echo "******3.2 Network Parameters******"
 echo ""
 
-echo ""
-echo "3.2.1"
-echo "Check source routed packets are not accepted"
-echo ""
+check1=`sysctl net.ipv4.conf.all.accept_source_route | awk '{print $3}'`
+check2=`sysctl net.ipv4.conf.default.accept_source_route | awk '{print $3}'`
+if [ "$check1" == "0" ] && [ "$check2" == "0" ];
+    then
+        echo "3.2.1;Ensure source routed packets are not accepted;OK"
+    else
+        echo "3.2.1;Ensure source routed packets are not accepted;WARNING"
+fi
 
-echo "$ sysctl net.ipv4.conf.all.accept_source_route"
-sysctl net.ipv4.conf.all.accept_source_route
-echo "$ sysctl net.ipv4.conf.default.accept_source_route"
-sysctl net.ipv4.conf.default.accept_source_route
+check1=`sysctl net.ipv4.conf.all.accept_redirects | awk '{print $3}'`
+check2=`sysctl  net.ipv4.conf.default.accept_redirects | awk '{print $3}'`
+if [ "$check1" == "0" ] && [ "$check2" == "0" ];
+    then
+        echo "3.2.2;Ensure ICMP redirects are not accepted;OK"
+    else
+        echo "3.2.2;Ensure ICMP redirects are not accepted;WARNING"
+fi
 
-echo ""
-echo "3.2.2"
-echo "Check ICMP redicrects are not accepted"
-echo ""
+check1=`sysctl net.ipv4.conf.all.secure_redirects | awk '{print $3}'`
+check2=`sysctl net.ipv4.conf.default.secure_redirects | awk '{print $3}'`
+if [ "$check1" == "0" ] && [ "$check2" == "0" ];
+    then
+        echo "3.2.3;Ensure secure ICMP redirects are not accepted;OK"
+    else
+        echo "3.2.3;Ensure secure ICMP redirects are not accepted;WARNING"
+fi
 
-echo "$ sysctl net.ipv4.conf.all.accept_redirects"
-sysctl net.ipv4.conf.all.accept_redirects
-echo "$ sysctl net.ipv4.conf.default.accept_redirects"
-sysctl net.ipv4.conf.default.accept_redirects
-
-echo ""
-echo "3.2.3"
-echo "Check secure ICMP redirects are not accepted"
-echo ""
-
-echo "$ sysctl net.ipv4.conf.all.secure_redirects"
-sysctl net.ipv4.conf.all.secure_redirects
-echo "$ sysctl net.ipv4.conf.default.secure_redirects"
-sysctl net.ipv4.conf.default.secure_redirects
-
-echo ""
-echo "3.2.4"
-echo "Check if suspicious packets are logged"
-echo ""
-
-echo "$ sysctl net.ipv4.conf.all.log_martians"
-sysctl net.ipv4.conf.all.log_martians
-echo "$ sysctl net.ipv4.conf.default.log_martians"
-sysctl net.ipv4.conf.default.log_martians
-
-echo ""
-echo "******3.3 IPv6******"
-echo ""
-
-echo ""
-echo "3.3.3"
-echo "Check if ipv6 is disabled"
-echo ""
-
-echo "$ modprobe -c | grep ipv6"
-modprobe -c | grep ipv6
+check1=`sysctl net.ipv4.conf.all.log_martians | awk '{print $3}'`
+check2=`sysctl net.ipv4.conf.default.log_martians | awk '{print $3}'`
+if [ "$check1" == "1" ] && [ "$check2" == "1" ];
+    then
+        echo "3.2.4;Ensure suspicious packets are logged;OK"
+    else
+        echo "3.2.4;Ensure suspicious packets are logged;WARNING"
+fi
 
 echo ""
 echo "******3.6 Firewall Configuration******"
 echo ""
 
-echo ""
-echo "3.6.1"
-echo "Check if iptables is installed"
-echo ""
-
-echo "$ rpm -q iptables"
-rpm -q iptables
+check1=`rpm -q iptables`
+if [ "$check1" != "package iptables is not installed" ] ;
+    then
+        echo "3.6;Ensure iptables is installed;OK"
+    else
+        echo "3.6;Ensure iptables is installed;WARNING"
+fi
 
 echo ""
 echo "******4.2.1 Configure rsyslog******"
