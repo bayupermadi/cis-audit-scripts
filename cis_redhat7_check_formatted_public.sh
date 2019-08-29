@@ -44,171 +44,146 @@ do
         then
             echo "1.1.1.$a;Ensure mounting of $i filesystems is disabled;OK"
         else
-            echo "1.1.1.$a;Ensure mounting of $i filesystems is disabled;FAILED"
+            echo "1.1.1.$a;Ensure mounting of $i filesystems is disabled;WARNING"
     fi
     a=$(($a+1));
 done;
 
-echo ""
-echo "1.1.3 , 1.1.4 , 1.1.5"
-echo "Check nodev,nosuid,noexec are set on /tmp"
-echo ""
+mounted=(nodev nosuid noexec)
+partition=(/tmp /var/tmp /dev/shm)
+for i in "${partition[@]}";
+do 
+    if [ "$i" == "/tmp" ]; then a=3
+    elif [ "$i" == "/var/tmp" ]; then a=8
+    else a=15
+    fi
 
-echo "$ mount | grep /tmp"
-mount | grep /tmp
+    for x in "${mounted[@]}";
+    do
+        check=`mount | grep $i | grep $x`
+        if [ "$check" != "" ] ;
+            then
+                echo "1.1.$a;Ensure $x option set on $i partition;OK"
+            else
+                echo "1.1.$a;Ensure $x option set on $i partition;WARNING"
+        fi
+        a=$(($a+1));
+    done;
+done;
 
-echo ""
-echo "1.1.8 , 1.1.9 , 1.1.10"
-echo "Check nodev,nosuid,noexec are set on /var/tmp"
-echo ""
-
-echo "$ mount | grep /tmp"
-mount | grep /var/tmp
-
-
-echo ""
-echo "1.1.14"
-echo "Check nodev is set on /home"
-echo ""
-
-echo "$ mount | grep /home"
-mount | grep /home
-
-echo ""
-echo "1.1.15 , 1.1.16 , 1.1.17"
-echo "Check nodev,nosuid,noexec are set on /dev/shm"
-echo ""
-
-echo "$ mount | grep /dev/shm"
-mount | grep /dev/shm
+mounted="nodev"
+partition="/home"
+check=`mount | grep $mounted | grep $partition`
+if [ "$check" != "" ] ;
+    then
+        echo "1.1.14;Ensure $mounted option set on $partition partition;OK"
+    else
+        echo "1.1.14;Ensure $mounted option set on $partition partition;WARNING"
+fi
 
 echo ""
 echo "******1.2 Configure Software Updates******"
 echo ""
 
-echo ""
-echo "1.2.4"
-echo "Ensure Red Hat Network or Subscription Manager connection is configured"
-echo ""
-
-echo "$ subscription-manager identity"
-subscription-manager identity
+check=`subscription-manager identity | grep -E "org name|org ID"`
+if [ "$check" != "" ] ;
+    then
+        echo "1.2.4;Ensure Red Hat Network or Subscription Manager connection is configured;OK"
+    else
+        echo "1.2.4;Ensure Red Hat Network or Subscription Manager connection is configured;WARNING"
+fi
 
 echo ""
 echo "******1.3 Filesystem Integrity Checking******"
 echo ""
 
-echo ""
-echo "1.3.1"
-echo "Check if AIDE is installed"
-echo ""
+check=`rpm -q aide`
+if [ "$check" != "package aide is not installed" ] ;
+    then
+        echo "1.3.1;Ensure AIDE is installed;OK"
+    else
+        echo "1.3.1;Ensure AIDE is installed;WARNING"
+fi
 
-echo "$ rpm -q aide"
-rpm -q aide
-
-echo ""
-echo "1.3.2"
-echo "Check if filesystem is regularly checked"
-echo ""
-
-echo "$ crontab -u root -l | grep aide"
-crontab -u root -l | grep aide
-
-echo "$ grep -r aide /etc/cron.* /etc/crontab"
-grep -r aide /etc/cron.* /etc/crontab
+check1=`crontab -u root -l | grep aide`
+check2=`grep -r aide /etc/cron.* /etc/crontab`
+if [ "$check1" != "" ] || [ "$check2" != "" ];
+    then
+        echo "1.3.2;Ensure filesystem integrity is regularly checked;OK"
+    else
+        echo "1.3.2;Ensure filesystem integrity is regularly checked;WARNING"
+fi
 
 echo ""
 echo "******1.4 Secure Boot Settings******"
 echo ""
 
-echo ""
-echo "1.4.1"
-echo "Check if permissions on bootloader config are configured"
-echo ""
+check1=`stat /boot/grub2/grub.cfg | grep Access`
+if [ "$check1" != "" ];
+    then
+        echo "1.4.1;Ensure permissions on bootloader config are configured;OK"
+    else
+        echo "1.4.1;Ensure permissions on bootloader config are configured;WARNING"
+fi
 
-echo "$ stat /boot/grub2/grub.cfg"
-stat /boot/grub2/grub.cfg
-
-echo ""
-echo "1.4.2"
-echo "Check if bootloader password is set"
-echo ""
-
-echo "$ grep '"^set superusers"' /boot/grub2/grub.cfg"
-grep "^set superusers" /boot/grub2/grub.cfg
-
-echo "$ grep '"^password"' /boot/grub2/grub.cfg"
-grep "^password" /boot/grub2/grub.cfg
-
-echo ""
-echo "1.4.3"
-echo "Check if authentication is required for single user mode"
-echo ""
-
-echo "$ grep /sbin/sulogin /usr/lib/systemd/system/rescue.service"
-grep /sbin/sulogin /usr/lib/systemd/system/rescue.service
-
-echo "$ grep /sbin/sulogin /usr/lib/systemd/system/emergency.service"
-grep /sbin/sulogin /usr/lib/systemd/system/emergency.service
+check1=`grep /sbin/sulogin /usr/lib/systemd/system/rescue.service | grep ExecStart`
+check2=`grep /sbin/sulogin /usr/lib/systemd/system/emergency.service | grep ExecStart`
+if [ "$check1" != "" ] || [ "$check2" != "" ];
+    then
+        echo "1.4.3;Ensure authentication required for single user mode;OK"
+    else
+        echo "1.4.3;Ensure authentication required for single user mode;WARNING"
+fi
 
 echo ""
 echo "******1.5 Additional Process Hardening******"
 echo ""
 
-echo ""
-echo "1.5.1"
-echo "Check if core dumps are restricted"
-echo ""
+check1=`grep "hard core" /etc/security/limits.conf /etc/security/limits.d/*`
+check2=`sysctl fs.suid_dumpable`
+if [ "$check1" != "" ] || [ "$check2" != "" ];
+    then
+        echo "1.5.1;Ensure core dumps are restricted;OK"
+    else
+        echo "1.5.1;Ensure core dumps are restricted;WARNING"
+fi
 
-echo "$ grep '"hard core"' /etc/security/limits.conf /etc/security/limits.d/*"
-grep "hard core" /etc/security/limits.conf /etc/security/limits.d/*
 
-echo "$ sysctl fs.suid_dumpable"
-sysctl fs.suid_dumpable
+check1=`dmesg | grep NX | grep protection`
+if [ "$check1" != "" ];
+    then
+        echo "1.5.2;Ensure XD/NX support is enabled;OK"
+    else
+        echo "1.5.2;Ensure XD/NX support is enabled;WARNING"
+fi
 
-echo ""
-echo "1.5.2"
-echo "Check if XD/NX support is enabled"
-echo ""
+check1=`sysctl kernel.randomize_va_space | awk '{print $3}'`
+if [ "$check1" == "2" ];
+    then
+        echo "1.5.3;Ensure XD/NX support is enabled;OK"
+    else
+        echo "1.5.4;Ensure XD/NX support is enabled;WARNING"
+fi
 
-echo "$ dmesg | grep NX"
-dmesg | grep NX
-
-echo ""
-echo "1.5.3"
-echo "Check if address space layout randomization (ASLR) is enabled"
-echo ""
-
-echo "$ sysctl kernel.randomize_va_space"
-sysctl kernel.randomize_va_space
-
-echo ""
-echo "1.5.4"
-echo "Check if prelink is disabled"
-echo ""
-
-echo "$ rpm -q prelink"
-rpm -q prelink
+check1=`rpm -q prelink`
+if [ "$check1" == "package prelink is not installed" ];
+    then
+        echo "1.5.4;Ensure prelink is disabled;OK"
+    else
+        echo "1.5.4;Ensure prelink is disabled;WARNING"
+fi
 
 echo ""
 echo ""******1.6 Mandatory Access Controls******
 echo ""
 
-echo ""
-echo "1.6.2"
-echo "Check if SELinux is installed"
-echo ""
-
-echo "$ rpm -q libselinux"
-rpm -q libselinux
-
-echo ""
-echo ""******1.8 Ensure updates, patches and additional security software are installed******
-echo ""
-
-echo "$ yum check-update"
-yum check-update
-
+check1=`rpm -q libselinux | grep selinux`
+if [ "$check1" != "" ];
+    then
+        echo "1.6.2;Ensure SELinux is installed;OK"
+    else
+        echo "1.6.2;Ensure SELinux is installed;WARNING"
+fi
 
 echo ""
 echo ""******2.2 Special Purpose Services******""
