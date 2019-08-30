@@ -11,28 +11,28 @@ echo "*********************************************************"
 echo "CIS Security Audit Script"
 echo "Red Hat 7"
 echo "Auditing for LEVEL ONE hardening"
-echo "Output can be found in /root/cis_report.txt"
+echo "Output can be found in /root/cis_report.csv"
 echo "NOTE: Run only in a bash shell"
 echo ""
 echo "WARNING: This script is only for Red Hat 7, please use correct script"
 echo "for target operating system"
 echo "*********************************************************"
 
-exec > "/root/cis_report.txt"
+exec > "/root/cis_report.csv"
 
-echo "CIS Security Audit Report"
-echo "*DATE*"
+echo "NAME; CIS Security Audit Report"
+echo -n "DATE; "
 date
-echo "*OS*"
-/etc/redhat-release
-echo "*KERNEL*"
+echo -n "OS;"
+cat /etc/redhat-release
+echo -n "KERNEL;"
 uname -a 
-echo "*HOST*"
+echo -n "HOST;"
 hostname
+
 echo ""
-echo "******1.1.1 Disable Unused File Systems******"
-echo ""
-echo ""
+echo "No;Scope;Status"
+echo "1.1.1;Disable Unused File Systems"
 
 modules=(cramfs freevxfs freevxfs jffs2 hfsplus squashfs udf vfat)
 a=1
@@ -81,9 +81,7 @@ if [ "$check" != "" ] ;
         echo "1.1.14;Ensure $mounted option set on $partition partition;WARNING"
 fi
 
-echo ""
-echo "******1.2 Configure Software Updates******"
-echo ""
+echo "1.2;Configure Software Updates"
 
 check=`subscription-manager identity | grep -E "org name|org ID"`
 if [ "$check" != "" ] ;
@@ -93,9 +91,8 @@ if [ "$check" != "" ] ;
         echo "1.2.4;Ensure Red Hat Network or Subscription Manager connection is configured;WARNING"
 fi
 
-echo ""
-echo "******1.3 Filesystem Integrity Checking******"
-echo ""
+
+echo "1.3;Filesystem Integrity Checking;"
 
 check=`rpm -q aide`
 if [ "$check" != "package aide is not installed" ] ;
@@ -114,9 +111,9 @@ if [ "$check1" != "" ] || [ "$check2" != "" ];
         echo "1.3.2;Ensure filesystem integrity is regularly checked;WARNING"
 fi
 
-echo ""
-echo "******1.4 Secure Boot Settings******"
-echo ""
+
+echo "1.4;Secure Boot Settings;"
+
 
 check1=`stat /boot/grub2/grub.cfg | grep Access`
 if [ "$check1" != "" ];
@@ -135,9 +132,9 @@ if [ "$check1" != "" ] || [ "$check2" != "" ];
         echo "1.4.3;Ensure authentication required for single user mode;WARNING"
 fi
 
-echo ""
-echo "******1.5 Additional Process Hardening******"
-echo ""
+
+echo "1.5;Additional Process Hardening;"
+
 
 check1=`grep "hard core" /etc/security/limits.conf /etc/security/limits.d/*`
 check2=`sysctl fs.suid_dumpable`
@@ -173,9 +170,8 @@ if [ "$check1" == "package prelink is not installed" ];
         echo "1.5.4;Ensure prelink is disabled;WARNING"
 fi
 
-echo ""
-echo ""******1.6 Mandatory Access Controls******
-echo ""
+
+echo "1.6;Mandatory Access Controls;"
 
 check1=`rpm -q libselinux | grep selinux`
 if [ "$check1" != "" ];
@@ -186,8 +182,7 @@ if [ "$check1" != "" ];
 fi
 
 echo ""
-echo ""******2.2 Special Purpose Services******""
-echo ""
+echo "2.2;Special Purpose Services"
 
 check1=`rpm -q ntp | grep ntp`
 if [ "$check1" != "package ntp is not installed" ];
@@ -249,8 +244,7 @@ if [ "$check1" != "" ] || [ "$check2" != "" ] || [ "$check3" != "" ];
 fi
 
 echo ""
-echo "******3.2 Network Parameters******"
-echo ""
+echo "3.2;Network Parameters;"
 
 check1=`sysctl net.ipv4.conf.all.accept_source_route | awk '{print $3}'`
 check2=`sysctl net.ipv4.conf.default.accept_source_route | awk '{print $3}'`
@@ -288,9 +282,7 @@ if [ "$check1" == "1" ] && [ "$check2" == "1" ];
         echo "3.2.4;Ensure suspicious packets are logged;WARNING"
 fi
 
-echo ""
-echo "******3.6 Firewall Configuration******"
-echo ""
+echo "3.6;Firewall Configuration;"
 
 check1=`rpm -q iptables`
 if [ "$check1" != "package iptables is not installed" ] ;
@@ -301,8 +293,7 @@ if [ "$check1" != "package iptables is not installed" ] ;
 fi
 
 echo ""
-echo "******4.2.1 Configure rsyslog******"
-echo ""
+echo "4.2.1;Configure rsyslog;"
 
 check1=`systemctl is-enabled rsyslog`
 if [ "$check1" == "enabled" ] ;
@@ -313,8 +304,7 @@ if [ "$check1" == "enabled" ] ;
 fi
 
 echo ""
-echo "******5.2 SSH Server Configuration******"
-echo ""
+echo "5.2;SSH Server Configuration;"
 
 check1=`systemctl is-enabled rsyslog`
 if [ "$check1" == "enabled" ] ;
@@ -367,88 +357,38 @@ fi
 check1=`grep "Ciphers" /etc/ssh/sshd_config`
 if [ "$check1" == "Ciphers aes256-ctr,aes192-ctr,aes128-ctr" ] ;
     then
-        echo "5.2.11;EEnsure only approved MAC algorithms are used;OK"
+        echo "5.2.11;Ensure only approved MAC algorithms are used;OK"
     else
         echo "5.2.11;Ensure only approved MAC algorithms are used;WARNING"
 fi
 
 echo ""
-echo "******6.1 System File Permissions******"
-echo ""
+echo "6.1;System File Permissions;"
 
-echo ""
-echo "6.1.2"
-echo "Check if permissions on /etc/passwd are configured"
-echo ""
+file=(passwd shadow group gshadow passwd- shadow- group- gshadow-)
+permission=("(0644/-rw-r--r--)" "(0000/----------)" "(0644/-rw-r--r--)" "(0000/----------)" "(0644/-rw-------)" "(0000/----------)" "(0644/-rw-------)" "(0000/----------)")
+a=2
+loop=0
+for i in "${file[@]}";
+do 
+    check=`stat /etc/$i | grep Uid | awk '{print $2}'`
+    if [ "$check" == "${permission[$loop]}" ] ;
+        then
+            echo "6.1.$a;Ensure permissions on /etc/$i are configured;OK"
+        else
+            echo "6.1.$a;Ensure permissions on /etc/$i are configured;WARNING"
+    fi
+    a=$(($a+1));
+    loop=$(($loop+1));
+done;
 
-echo "$ stat /etc/passwd"
-stat /etc/passwd
+echo "6.2;User and Group Settings;"
 
-echo ""
-echo "6.1.3"
-echo "Check if permissions on /etc/shadow are configured"
-echo ""
-
-echo "$ stat /etc/shadow"
-stat /etc/shadow
-
-echo ""
-echo "6.1.4"
-echo "Check if permissions on /etc/group are configured"
-echo ""
-
-echo "$ stat /etc/group"
-stat /etc/group
-
-echo ""
-echo "6.1.5"
-echo "Check if permissions on /etc/gshadow are configured"
-echo ""
-
-echo "$ stat /etc/gshadow"
-stat /etc/gshadow
-
-echo ""
-echo "6.1.6"
-echo "Check if permissions on /etc/passwd- are configured"
-echo ""
-
-echo "$ stat /etc/passwd-"
-stat /etc/passwd-
-
-echo ""
-echo "6.1.7"
-echo "Check if permissions on /etc/shadow- are configured"
-echo ""
-
-echo "$ stat /etc/shadow-"
-stat /etc/shadow-
-
-echo ""
-echo "6.1.8"
-echo "Check if permissions on /etc/group- are configured"
-echo ""
-
-echo "$ stat /etc/group-"
-stat /etc/group-
-
-echo ""
-echo "6.1.9"
-echo "Check if permissions on /etc/gshadow- are configured"
-echo ""
-
-echo "$ stat /etc/gshadow-"
-stat /etc/gshadow-
-
-echo ""
-echo "******6.2 User and Group Settings******"
-echo ""
-
-echo ""
-echo "6.2.5"
-echo "Check if root is the only UID 0 account"
-echo ""
-
-echo "$ cat /etc/passwd | awk -F: '($3 == 0) { print $1 }'"
-cat /etc/passwd | awk -F: '($3 == 0) { print $1 }'
+check=`cat /etc/passwd | awk -F: '($3 == 0) { print $1 }'`
+if [ "$check" == "root" ] ;
+    then
+        echo "6.2.5;Ensure root is the only UID 0 account;OK"
+    else
+        echo "6.2.5;Ensure root is the only UID 0 account;WARNING"
+fi
 
