@@ -20,8 +20,8 @@ echo "*********************************************************"
 
 exec > "/root/cis_report.csv"
 
-echo "NAME; CIS Security Audit Report"
-echo -n "DATE; "
+echo "NAME;CIS Security Audit Report"
+echo -n "DATE;"
 date
 echo -n "OS;"
 cat /etc/redhat-release
@@ -32,6 +32,8 @@ hostname
 
 echo ""
 echo "No;Scope;Status"
+echo "1;Initial Setup"
+echo "1.1;Filesystem Configuration"
 echo "1.1.1;Disable Unused File Systems"
 
 modules=(cramfs freevxfs freevxfs jffs2 hfsplus squashfs udf vfat)
@@ -45,6 +47,21 @@ do
             echo "1.1.1.$a;Ensure mounting of $i filesystems is disabled;OK"
         else
             echo "1.1.1.$a;Ensure mounting of $i filesystems is disabled;WARNING"
+    fi
+    a=$(($a+1));
+done;
+
+mount=(/tmp /var /var/tmp /var/log /var/log/audit /home)
+number=(2 6 7 11 12 13)
+a=0
+for i in "${mount[@]}";
+do 
+    check=`mount | grep $i`
+    if [ "$check" != " " ];
+        then
+            echo "1.1.${number[$a]};Ensure separate partition exists for $i;OK"
+        else
+            echo "1.1.${number[$a]};Ensure separate partition exists for $i;WARNING"
     fi
     a=$(($a+1));
 done;
@@ -81,15 +98,30 @@ if [ "$check" != "" ] ;
         echo "1.1.14;Ensure $mounted option set on $partition partition;WARNING"
 fi
 
-echo "1.2;Configure Software Updates"
-
-check=`subscription-manager identity | grep -E "org name|org ID"`
-if [ "$check" != "" ] ;
+check=`df --local -P | awk {'if (NR!=1) print $6'} | xargs -I '{}' find '{}' -xdev -type d \( -perm -0002 -a ! -perm -1000 \) 2>/dev/null`
+if [ "$check" == "" ] ;
     then
-        echo "1.2.4;Ensure Red Hat Network or Subscription Manager connection is configured;OK"
+        echo "1.1.21;Ensure sticky bit is set on all world-writable directories;OK"
     else
-        echo "1.2.4;Ensure Red Hat Network or Subscription Manager connection is configured;WARNING"
+        echo "1.1.21;Ensure sticky bit is set on all world-writable directories;WARNING"
 fi
+
+check=`systemctl is-enabled autofs`
+if [ "$check" == "" ] ;
+    then
+        echo "1.1.22;Disable Automounting;OK"
+    else
+        echo "1.1.22;Disable Automounting;WARNING"
+fi
+
+echo "1.2;Configure Software Updates"
+check=`grep ^gpgcheck /etc/yum.conf`
+if [ "$check" == "gpgcheck=1" ] ;
+    then
+        echo "1.2.2;Ensure gpgcheck is globally activated;OK"
+    else
+        echo "1.2.2;Ensure gpgcheck is globally activated;WARNING"
+fi;
 
 
 echo "1.3;Filesystem Integrity Checking;"
@@ -115,12 +147,20 @@ fi
 echo "1.4;Secure Boot Settings;"
 
 
-check1=`stat /boot/grub2/grub.cfg | grep Access`
-if [ "$check1" != "" ];
+check1=`stat /boot/grub2/grub.cfg | grep Uid | awk '{print $2}'`
+if [ "$check1" == "(0600/-rw-r--r--)" ];
     then
         echo "1.4.1;Ensure permissions on bootloader config are configured;OK"
     else
         echo "1.4.1;Ensure permissions on bootloader config are configured;WARNING"
+fi
+
+check1=`grep "^GRUB2_PASSWORD" /boot/grub2/grub.cfg`
+if [ "$check1" != "" ];
+    then
+        echo "1.4.2;Ensure bootloader password is set;OK"
+    else
+        echo "1.4.2;Ensure bootloader password is set;WARNING"
 fi
 
 check1=`grep /sbin/sulogin /usr/lib/systemd/system/rescue.service | grep ExecStart`
@@ -168,17 +208,6 @@ if [ "$check1" == "package prelink is not installed" ];
         echo "1.5.4;Ensure prelink is disabled;OK"
     else
         echo "1.5.4;Ensure prelink is disabled;WARNING"
-fi
-
-
-echo "1.6;Mandatory Access Controls;"
-
-check1=`rpm -q libselinux | grep selinux`
-if [ "$check1" != "" ];
-    then
-        echo "1.6.2;Ensure SELinux is installed;OK"
-    else
-        echo "1.6.2;Ensure SELinux is installed;WARNING"
 fi
 
 echo ""
