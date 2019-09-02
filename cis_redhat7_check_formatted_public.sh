@@ -211,6 +211,38 @@ if [ "$check1" == "package prelink is not installed" ];
 fi
 
 echo ""
+echo "2.1;inetd Services"
+a=1
+service=(chargen daytime discard echo time)
+for x in "${service[@]}";
+do
+    check1=`systemctl is-enabled $x-dram`
+    check2=`systemctl is-enabled $x-stream`
+    if [ "$check1" == "" ] && [ "$check2" == "" ]; 
+        then
+            echo "2.1.$a;Ensure $x services are not enabled;OK"
+        else
+            echo "2.1.$a;Ensure $x services are not enabled;WARNING"
+    fi
+    a=$(($a+1));
+done;
+
+check1=`systemctl is-enabled tftp`
+if [ "$check1" == "" ]; 
+    then
+        echo "2.1.6;Ensure tftp server is not enabled;OK"
+    else
+        echo "2.1.6;Ensure tftp server is not enabled;WARNING"
+fi
+
+check1=`systemctl is-enabled xinetd`
+if [ "$check1" == "" ]; 
+    then
+        echo "2.1.7;Ensure xinetd is not enabled;OK"
+    else
+        echo "2.1.7;Ensure xinetd is not enabled;WARNING"
+fi
+
 echo "2.2;Special Purpose Services"
 
 check1=`rpm -q ntp | grep ntp`
@@ -230,6 +262,23 @@ if [ "$check1" != "" ] || [ "$check2" != "" ] || [ "$check3" != "" ] || [ "$chec
         echo "2.2.1.2;Ensure ntp is configured;OK"
     else
         echo "2.2.1.2;Ensure ntp is configured;WARNING"
+fi
+
+check1=`grep "^(server|pool)" /etc/chrony.conf | grep server `
+check2=`grep ^OPTIONS /etc/sysconfig/chronyd`
+if [ "$check1" != "" ] && [ "$check2" != "" ];
+    then
+        echo "2.2.1.3;Ensure chrony is configured;OK"
+    else
+        echo "2.2.1.3;Ensure chrony is configured;WARNING"
+fi
+
+check1=`rpm -qa xorg-x11*`
+if [ "$check1" == "" ];
+    then
+        echo "2.2.2;Ensure X Window System is not installed;OK"
+    else
+        echo "2.2.2;Ensure X Window System is not installed;WARNING"
 fi
 
 services=(avahi-daemon cups dhcpd slapd named vsftpd httpd dovecot smb squid snmpd ypserv telnet.socket tftp.socket rsyncd ntalk)
@@ -254,6 +303,16 @@ do
     loop=$(($loop+1));
 done;
 
+check1=`systemctl is-enabled nfs`
+check2=`systemctl is-enabled nfs-server`
+check3=`systemctl is-enabled rpcbind`
+if [ "$check1" == "" ] && [ "$check2" == "" ] && [ "$check3" == "" ] ;
+    then
+        echo "2.2.7;Ensure NFS and RPC are not enabled;OK"
+    else
+        echo "2.2.7;Ensure NFS and RPC are not enabled;WARNING"
+fi
+
 check1=`netstat -an | grep LIST | grep ":25[[:space:]]" | grep 127.0.0.1`
 if [ "$check1" != "" ];
     then
@@ -272,8 +331,44 @@ if [ "$check1" != "" ] || [ "$check2" != "" ] || [ "$check3" != "" ];
         echo "2.2.17;Ensure rsh server is not enabled;WARNING"
 fi
 
+echo "2.3;Service Clients"
+a=1
+loop=0
+service=(ypbind rsh talk telnet openldap-clients)
+name=(NIS rsh talk telnet LDAP)
+for x in "${service[@]}";
+do
+    check1=`rpm -q $x`
+    if [ "$check1" != "package $x is not installed" ]; 
+        then
+            echo "2.3.$a;Ensure ${name[$loop]} client is not installed;OK"
+        else
+            echo "2.3.$a;Ensure ${name[$loop]} client is not installed;WARNING"
+    fi
+    a=$(($a+1));
+    loop=$(($loop+1));
+done;
+
 echo ""
-echo "3.2;Network Parameters;"
+echo "3.1;Network Parameters (Host Only);"
+check1=`sysctl net.ipv4.ip_forward | awk '{print $3}'`
+if [ "$check1" == "0" ];
+    then
+        echo "3.1.1;Ensure IP forwarding is disabled;OK"
+    else
+        echo "3.1.1;Ensure IP forwarding is disabled;WARNING"
+fi
+
+check1=`sysctl net.ipv4.conf.all.send_redirects | awk '{print $3}'`
+check2=`sysctl net.ipv4.conf.default.send_redirects | awk '{print $3}'`
+if [ "$check1" == "0" ] && [ "$check2" == "0" ];
+    then
+        echo "3.1.2;Ensure packet redirect sending is disabled;OK"
+    else
+        echo "3.1.2;Ensure packet redirect sending is disabled;WARNING"
+fi
+
+echo "3.2;Network Parameters (Host and Router);"
 
 check1=`sysctl net.ipv4.conf.all.accept_source_route | awk '{print $3}'`
 check2=`sysctl net.ipv4.conf.default.accept_source_route | awk '{print $3}'`
@@ -311,17 +406,77 @@ if [ "$check1" == "1" ] && [ "$check2" == "1" ];
         echo "3.2.4;Ensure suspicious packets are logged;WARNING"
 fi
 
+check1=`sysctl net.ipv4.icmp_echo_ignore_broadcasts  | awk '{print $3}'`
+if [ "$check1" == "1" ];
+    then
+        echo "3.2.5;Ensure broadcast ICMP requests are ignored;OK"
+    else
+        echo "3.2.5;Ensure broadcast ICMP requests are ignored;WARNING"
+fi
+
+check1=`sysctl net.ipv4.icmp_ignore_bogus_error_responses  | awk '{print $3}'`
+if [ "$check1" == "1" ];
+    then
+        echo "3.2.6;Ensure bogus ICMP responses are ignored ;OK"
+    else
+        echo "3.2.6;Ensure bogus ICMP responses are ignored ;WARNING"
+fi
+
+check1=`sysctl net.ipv4.conf.all.rp_filter  | awk '{print $3}'`
+check2=`sysctl net.ipv4.conf.default.rp_filter  | awk '{print $3}'`
+if [ "$check1" == "1" ] && [ "$check1" == "1" ];
+    then
+        echo "3.2.7;Ensure Reverse Path Filtering is enabled;OK"
+    else
+        echo "3.2.7;Ensure Reverse Path Filtering is enabled;WARNING"
+fi
+
+check1=`sysctl net.ipv4.tcp_syncookies | awk '{print $3}'`
+if [ "$check1" == "1" ];
+    then
+        echo "3.2.8;Ensure TCP SYN Cookies is enabled;OK"
+    else
+        echo "3.2.8;Ensure TCP SYN Cookies is enabled;WARNING"
+fi
+
+echo "3.4;TCP Wrappers;"
+check1=`rpm -q tcp_wrappers`
+if [ "$check1" != "package tcp_wrappers is not installed" ];
+    then
+        echo "3.4.1;Ensure TCP Wrappers is installed;OK"
+    else
+        echo "3.4.1;Ensure TCP Wrappers is installed;WARNING"
+fi
+
+check1=`stat /etc/hosts.allow | grep Uid | awk '{print $2}'`
+if [ "$check1" == "(0644/-rw-r--r--)" ];
+    then
+        echo "3.4.4;Ensure permissions on /etc/hosts.allow are configured;OK"
+    else
+        echo "3.4.4;Ensure permissions on /etc/hosts.allow are configured;WARNING"
+fi
+
+check1=`stat /etc/hosts.deny | grep Uid | awk '{print $2}'`
+if [ "$check1" == "(0644/-rw-r--r--)" ];
+    then
+        echo "3.4.5;Ensure permissions on /etc/hosts.deny are configured;OK"
+    else
+        echo "3.4.5;Ensure permissions on /etc/hosts.deny are configured;WARNING"
+fi
+
 echo "3.6;Firewall Configuration;"
 
 check1=`rpm -q iptables`
 if [ "$check1" != "package iptables is not installed" ] ;
     then
-        echo "3.6;Ensure iptables is installed;OK"
+        echo "3.6.1;Ensure iptables is installed;OK"
     else
-        echo "3.6;Ensure iptables is installed;WARNING"
+        echo "3.6.1;Ensure iptables is installed;WARNING"
 fi
 
 echo ""
+echo "4;Logging and Auditing"
+echo "4.2;Configure logging"
 echo "4.2.1;Configure rsyslog;"
 
 check1=`systemctl is-enabled rsyslog`
@@ -332,24 +487,26 @@ if [ "$check1" == "enabled" ] ;
         echo "4.2.1.1;Ensure rsyslog Service is enabled;WARNING"
 fi
 
+check1=`rpm -q rsyslog`
+check2=`rpm -q syslog-ng`
+if [ "$check1" != "package rsyslog is not installed" ] || [ "$check2" != "package syslog-ng is not installed" ];
+    then
+        echo "4.2.3;Ensure rsyslog or syslog-ng is installed;OK"
+    else
+        echo "4.2.3;Ensure rsyslog or syslog-ng is installed;WARNING"
+fi
+
 echo ""
+echo "5;Access, Authentication and Authorization"
+echo "5.1;Configure cron;"
+check2=`systemctl is-enabled crond`
+if [ "$check1" == "enabled" ];
+    then
+        echo "5.1.1;Ensure cron daemon is enabled;OK"
+    else
+        echo "5.1.1;Ensure cron daemon is enabled;WARNING"
+fi
 echo "5.2;SSH Server Configuration;"
-
-check1=`systemctl is-enabled rsyslog`
-if [ "$check1" == "enabled" ] ;
-    then
-        echo "4.2.1.1;Ensure rsyslog Service is enabled;OK"
-    else
-        echo "4.2.1.1;Ensure rsyslog Service is enabled;WARNING"
-fi
-
-check1=`stat /etc/ssh/sshd_config | grep Uid | awk '{print $2}'`
-if [ "$check1" == "(0600/-rw-------)" ] ;
-    then
-        echo "5.2.1;Ensure permissions on /etc/ssh/sshd_config are configured;OK"
-    else
-        echo "5.2.1;Ensure permissions on /etc/ssh/sshd_config are configured;WARNING"
-fi
 
 check1=`stat /etc/ssh/sshd_config | grep Uid | awk '{print $2}'`
 if [ "$check1" == "(0600/-rw-------)" ] ;
@@ -383,6 +540,14 @@ if [ "$check1" == "X11Forwarding no" ] ;
         echo "5.2.4;Ensure SSH X11 forwarding is disabled;WARNING"
 fi
 
+check1=`grep "PermitEmptyPasswords" /etc/ssh/sshd_config`
+if [ "$check1" == "PermitEmptyPasswords no" ] ;
+    then
+        echo "5.2.9;Ensure SSH PermitEmptyPasswords is disabled;OK"
+    else
+        echo "5.2.9;Ensure SSH PermitEmptyPasswords is disabled;WARNING"
+fi
+
 check1=`grep "Ciphers" /etc/ssh/sshd_config`
 if [ "$check1" == "Ciphers aes256-ctr,aes192-ctr,aes128-ctr" ] ;
     then
@@ -390,12 +555,28 @@ if [ "$check1" == "Ciphers aes256-ctr,aes192-ctr,aes128-ctr" ] ;
     else
         echo "5.2.11;Ensure only approved MAC algorithms are used;WARNING"
 fi
+check1=`grep "ClientAliveInterval" /etc/ssh/sshd_config`
+check2=`grep "ClientAliveCountMax" /etc/ssh/sshd_config`
+if [ "$check1" == "ClientAliveInterval 300" ] && [ "$check2" == "ClientAliveCountMax 0" ]  ;
+    then
+        echo "5.2.12;Ensure SSH Idle Timeout Interval is configured;OK"
+    else
+        echo "5.2.12;Ensure SSH Idle Timeout Interval is configured;WARNING"
+fi
+
+check1=`grep "Banner" /etc/ssh/sshd_config`
+if [ "$check1" == "Banner /etc/issue.net" ];
+    then
+        echo "5.2.15;Ensure SSH warning banner is configured;OK"
+    else
+        echo "5.2.15;Ensure SSH warning banner is configured;WARNING"
+fi
 
 echo ""
 echo "6.1;System File Permissions;"
 
 file=(passwd shadow group gshadow passwd- shadow- group- gshadow-)
-permission=("(0644/-rw-r--r--)" "(0000/----------)" "(0644/-rw-r--r--)" "(0000/----------)" "(0644/-rw-------)" "(0000/----------)" "(0644/-rw-------)" "(0000/----------)")
+permission=("(0644/-rw-r--r--)" "(0000/----------)" "(0644/-rw-r--r--)" "(0000/----------)" "(0644/-rw-r--r--)" "(0000/----------)" "(0644/-rw-r--r--)" "(0000/----------)")
 a=2
 loop=0
 for i in "${file[@]}";
@@ -412,6 +593,39 @@ do
 done;
 
 echo "6.2;User and Group Settings;"
+
+check=`cat /etc/shadow | awk -F: '($2 == "" ) { print $1 " does not have a password "}'`
+if [ "$check" == "" ] ;
+    then
+        echo "6.2.1;Ensure password fields are not empty;OK"
+    else
+        echo "6.2.1;Ensure password fields are not empty;WARNING"
+fi
+
+check=`grep '^\+:' /etc/passwd`
+if [ "$check" == "" ] ;
+    then
+        echo "6.2.2;Ensure no legacy "+" entries exist in /etc/passwd;OK"
+    else
+        echo "6.2.2;Ensure no legacy "+" entries exist in /etc/passwd;WARNING"
+fi
+
+check=`grep '^\+:' /etc/shadow`
+if [ "$check" == "" ] ;
+    then
+        echo "6.2.3;Ensure no legacy "+" entries exist in /etc/shadow;OK"
+    else
+        echo "6.2.3;Ensure no legacy "+" entries exist in /etc/shadow;WARNING"
+fi
+
+check=`grep '^\+:' /etc/group`
+if [ "$check" == "" ] ;
+    then
+        echo "6.2.4;Ensure no legacy "+" entries exist in /etc/group;OK"
+    else
+        echo "6.2.4;Ensure no legacy "+" entries exist in /etc/group;WARNING"
+fi
+
 
 check=`cat /etc/passwd | awk -F: '($3 == 0) { print $1 }'`
 if [ "$check" == "root" ] ;
