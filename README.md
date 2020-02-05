@@ -8,3 +8,5 @@ A couple things to note:
 * If you are running internet facing servers you will need to add more benchmarks. I may create new versions for that purpose.
 * These will not remediate the listed check. You will need to do the remediation steps.
 * This is NOT a catch-all. You will need to know YOUR environment and how these will impact YOU.
+
+You can use the attached pdf for this benchmark checking
