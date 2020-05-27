@@ -107,7 +107,7 @@ if [ "$check" == "" ] ;
 fi
 
 check=`systemctl is-enabled autofs`
-if [ "$check" == "" ] ;
+if [ $? == 1 ] ;
     then
         echo "1.1.22;Disable Automounting;OK"
     else
@@ -148,7 +148,7 @@ echo "1.4;Secure Boot Settings;"
 
 
 check1=`stat /boot/grub2/grub.cfg | grep Uid | awk '{print $2}'`
-if [ "$check1" == "(0600/-rw-r--r--)" ];
+if [ "$check1" == "(0600/-rw-------)" ];
     then
         echo "1.4.1;Ensure permissions on bootloader config are configured;OK"
     else
@@ -229,7 +229,7 @@ if [ "$check1" == "Enforcing" ];
 fi
 
 check1=`grep SELINUXTYPE=targeted /etc/selinux/config`
-if [ "$check1" == "SELINUXTYPE=targeted" ];
+if [ $? == 0 ];
     then
         echo "1.6.1.3;Ensure SELinux policy is configured;OK"
     else
@@ -237,7 +237,7 @@ if [ "$check1" == "SELINUXTYPE=targeted" ];
 fi
 
 check1=`rpm -q setroubleshoot`
-if [ "$check1" == "" ];
+if [ $? == 1 ];
     then
         echo "1.6.1.4;Ensure SETroubleshoot is not installed;OK"
     else
@@ -245,7 +245,7 @@ if [ "$check1" == "" ];
 fi
 
 check1=` rpm -q mcstrans`
-if [ "$check1" == "" ];
+if [ $? == 1 ];
     then
         echo "1.6.1.5;Ensure the MCS Translation Service (mcstrans) is not installed;OK"
     else
@@ -280,7 +280,7 @@ if [ "$check1" == "" ];
 fi
 
 check1=`stat /etc/issue | grep "644" | grep "root"`
-if [ "$check1" == "" ];
+if [ $? == 0 ];
     then
         echo "1.7.1.5;Ensure permissions on /etc/issue are configured;OK"
     else
@@ -289,7 +289,7 @@ fi
 
 check1=`cat /usr/share/dconf/profile/gdm | grep -E "user-db:user|system-db:gdm|file-db:/usr/share/gdm/greeter-dconf-defaults" | wc -l`
 check2=`cat /etc/dconf/db/gdm.d/01-banner-message | grep -E "[org/gnome/login-screen]|banner-message-enable=true|banner-message-text=" | wc -l`
-if [ "$check1" != 0 and "$check2" !=0 ];
+if [ "$check1" != 0 ] && [ "$check2" != 0 ];
     then
         echo "1.7.2;Ensure GDM login banner is configured;OK"
     else
@@ -531,7 +531,7 @@ fi
 echo "3.3;IPv6;"
 check1=`sysctl net.ipv6.conf.all.accept_ra | awk '{print $3}'`
 check2=`sysctl net.ipv6.conf.default.accept_ra | awk '{print $3}'`
-if [ "$check1" == 0 && "$check2" == 0 ];
+if [ "$check1" == 0 ] && [ "$check2" == 0 ];
     then
         echo "3.3.1;Ensure IPv6 router advertisements are not accepted;OK"
     else
@@ -540,7 +540,7 @@ fi
 
 check1=`sysctl net.ipv6.conf.all.accept_redirects | awk '{print $3}'`
 check2=`sysctl net.ipv6.conf.default.accept_redirects | awk '{print $3}'`
-if [ "$check1" == 0 && "$check2" == 0 ];
+if [ "$check1" == 0 ] && [ "$check2" == 0 ];
     then
         echo "3.3.2;Ensure IPv6 redirects are not accepted;OK"
     else
