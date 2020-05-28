@@ -342,9 +342,8 @@ if [ "$check1" != "package ntp is not installed" ];
 fi
 
 check1=`grep '"^restrict"' /etc/ntp.conf`
-check2=`grep '"^(server|pool)"' /etc/ntp.conf`
-check3=`grep '"^OPTIONS"' /etc/sysconfig/ntpd`
-check4=`grep '"^ExecStart"' /usr/lib/systemd/system/ntpd.service`
+check2=`grep -E "server|pool" /etc/ntp.conf`
+check3=`grep -- "-u ntp:ntp" /usr/lib/systemd/system/ntpd.service /etc/sysconfig/ntpd`
 if [ "$check1" != "" ] || [ "$check2" != "" ] || [ "$check3" != "" ] || [ "$check4" != "" ];
     then
         echo "2.2.1.2;Ensure ntp is configured;OK"
@@ -352,8 +351,8 @@ if [ "$check1" != "" ] || [ "$check2" != "" ] || [ "$check3" != "" ] || [ "$chec
         echo "2.2.1.2;Ensure ntp is configured;WARNING"
 fi
 
-check1=`grep "^(server|pool)" /etc/chrony.conf | grep server `
-check2=`grep ^OPTIONS /etc/sysconfig/chronyd`
+check1=`grep -E "server|pool" /etc/chrony.conf`
+check2=`grep -- '-u chrony' /etc/sysconfig/chronyd`
 if [ "$check1" != "" ] && [ "$check2" != "" ];
     then
         echo "2.2.1.3;Ensure chrony is configured;OK"
@@ -381,7 +380,7 @@ do
     fi;
 
     check=`systemctl is-enabled $i`
-    if [ "$check" == "" ] ;
+    if [ "$check" == "disabled" ] ;
         then
             echo "2.2.$a;Ensure ${svc_name[$loop]} Server is not enabled;OK"
         else
@@ -394,7 +393,7 @@ done;
 check1=`systemctl is-enabled nfs`
 check2=`systemctl is-enabled nfs-server`
 check3=`systemctl is-enabled rpcbind`
-if [ "$check1" == "" ] && [ "$check2" == "" ] && [ "$check3" == "" ] ;
+if [ "$check1" == "disabled" ] && [ "$check2" == "disabled" ] && [ "$check3" == "disabled" ] ;
     then
         echo "2.2.7;Ensure NFS and RPC are not enabled;OK"
     else
@@ -412,7 +411,7 @@ fi
 check1=`systemctl is-enabled rsh.socket`
 check2=`systemctl is-enabled rlogin.socket`
 check3=`systemctl is-enabled rexec.socket`
-if [ "$check1" != "" ] || [ "$check2" != "" ] || [ "$check3" != "" ];
+if [ "$check1" == "disabled" ] && [ "$check2" == "disabled" ] && [ "$check3" == "disabled" ];
     then
         echo "2.2.17;Ensure rsh server is not enabled;OK"
     else
@@ -427,7 +426,7 @@ name=(NIS rsh talk telnet LDAP)
 for x in "${service[@]}";
 do
     check1=`rpm -q $x`
-    if [ "$check1" != "package $x is not installed" ]; 
+    if [ "$check1" == "package $x is not installed" ]; 
         then
             echo "2.3.$a;Ensure ${name[$loop]} client is not installed;OK"
         else
@@ -621,7 +620,7 @@ fi
 echo ""
 echo "5;Access, Authentication and Authorization"
 echo "5.1;Configure cron;"
-check2=`systemctl is-enabled crond`
+check1=`systemctl is-enabled crond`
 if [ "$check1" == "enabled" ];
     then
         echo "5.1.1;Ensure cron daemon is enabled;OK"
@@ -670,28 +669,28 @@ if [ "$check1" == "PermitEmptyPasswords no" ] ;
         echo "5.2.9;Ensure SSH PermitEmptyPasswords is disabled;WARNING"
 fi
 
-check1=`grep "Ciphers" /etc/ssh/sshd_config`
+check1=`grep "Ciphers" /etc/ssh/sshd_config | grep -v key`
 if [ "$check1" == "Ciphers aes256-ctr,aes192-ctr,aes128-ctr" ] ;
     then
-        echo "5.2.11;Ensure only approved MAC algorithms are used;OK"
+        echo "5.2.12;Ensure only approved ciphers are used;OK"
     else
-        echo "5.2.11;Ensure only approved MAC algorithms are used;WARNING"
+        echo "5.2.12;Ensure only approved ciphers are used;WARNING"
 fi
 check1=`grep "ClientAliveInterval" /etc/ssh/sshd_config`
 check2=`grep "ClientAliveCountMax" /etc/ssh/sshd_config`
 if [ "$check1" == "ClientAliveInterval 300" ] && [ "$check2" == "ClientAliveCountMax 0" ]  ;
     then
-        echo "5.2.12;Ensure SSH Idle Timeout Interval is configured;OK"
+        echo "5.2.13;Ensure SSH Idle Timeout Interval is configured;OK"
     else
-        echo "5.2.12;Ensure SSH Idle Timeout Interval is configured;WARNING"
+        echo "5.2.13;Ensure SSH Idle Timeout Interval is configured;WARNING"
 fi
 
 check1=`grep "Banner" /etc/ssh/sshd_config`
 if [ "$check1" == "Banner /etc/issue.net" ];
     then
-        echo "5.2.15;Ensure SSH warning banner is configured;OK"
+        echo "5.2.16;Ensure SSH warning banner is configured;OK"
     else
-        echo "5.2.15;Ensure SSH warning banner is configured;WARNING"
+        echo "5.2.16;Ensure SSH warning banner is configured;WARNING"
 fi
 
 echo ""
